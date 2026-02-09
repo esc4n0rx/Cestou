@@ -4,21 +4,24 @@ import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/contexts/auth-context"
 import { AuthGuard } from "@/components/auth-guard"
-
+import { PwaManager } from "@/components/pwa-manager"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
-  title: "MercadoApp - Gerenciamento de Compras",
+  title: "Cestou - Gerenciamento de Compras",
   description:
     "Gerencie suas compras de mercado de forma inteligente e organizada",
-  generator: "v0.app",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "MercadoApp",
+    title: "Cestou",
   },
 }
 
@@ -49,6 +52,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <AuthGuard>{children}</AuthGuard>
+            <PwaManager />
           </AuthProvider>
         </ThemeProvider>
       </body>
