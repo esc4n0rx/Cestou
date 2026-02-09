@@ -1,4 +1,4 @@
-const SW_VERSION = "v1.0.0"
+const SW_VERSION = "v1.0.1"
 const STATIC_CACHE = `market-static-${SW_VERSION}`
 const RUNTIME_CACHE = `market-runtime-${SW_VERSION}`
 

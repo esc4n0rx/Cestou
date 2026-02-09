@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Minus, Package, Search, ChevronDown, LayoutGrid, List } from "lucide-react"
 import { AppLayout } from "@/components/app-layout"
 import { cn } from "@/lib/utils"
@@ -31,6 +31,27 @@ export default function EstoquePage() {
   useEffect(() => {
     loadInventory()
   }, [loadInventory])
+
+  useEffect(() => {
+    if (
+      selectedCategory !== "Todos" &&
+      categories.length > 0 &&
+      !categories.some((category) => category.name === selectedCategory)
+    ) {
+      setSelectedCategory("Todos")
+    }
+  }, [categories, selectedCategory])
+
+  const categoryLabel = useCallback(
+    (name: string) => {
+      const match = categories.find((category) => category.name === name)
+      if (!match) return name
+      return `${match.emoji} ${match.name}`
+    },
+    [categories]
+  )
+
+  const activeCategories = categories.filter((category) => category.is_active)
 
   const filteredStock = useMemo(
     () =>
@@ -86,7 +107,7 @@ export default function EstoquePage() {
               onClick={() => setShowCategoryFilter(!showCategoryFilter)}
               className="flex h-full items-center gap-1.5 rounded-xl border border-input bg-card px-3 text-sm"
             >
-              <span className="hidden sm:inline">{selectedCategory}</span>
+              <span className="hidden sm:inline">{selectedCategory === "Todos" ? "Todos" : categoryLabel(selectedCategory)}</span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </button>
             {showCategoryFilter && (
@@ -95,11 +116,11 @@ export default function EstoquePage() {
                   setSelectedCategory("Todos")
                   setShowCategoryFilter(false)
                 }} className={cn("w-full rounded-lg px-3 py-2 text-left text-sm", selectedCategory === "Todos" ? "bg-primary/10 text-primary" : "hover:bg-muted")}>Todos</button>
-                {categories.map((cat) => (
-                  <button key={cat} type="button" onClick={() => {
-                    setSelectedCategory(cat)
+                {activeCategories.map((cat) => (
+                  <button key={cat.name} type="button" onClick={() => {
+                    setSelectedCategory(cat.name)
                     setShowCategoryFilter(false)
-                  }} className={cn("w-full rounded-lg px-3 py-2 text-left text-sm", selectedCategory === cat ? "bg-primary/10 text-primary" : "hover:bg-muted")}>{cat}</button>
+                  }} className={cn("w-full rounded-lg px-3 py-2 text-left text-sm", selectedCategory === cat.name ? "bg-primary/10 text-primary" : "hover:bg-muted")}>{cat.emoji} {cat.name}</button>
                 ))}
               </div>
             )}
@@ -122,7 +143,7 @@ export default function EstoquePage() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="min-w-0">
                       <h3 className="text-sm font-semibold text-foreground truncate">{item.name}</h3>
-                      <p className="text-xs text-muted-foreground">{item.category}</p>
+                      <p className="text-xs text-muted-foreground">{categoryLabel(item.category)}</p>
                     </div>
                     <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", level === "empty" ? "bg-destructive/10 text-destructive" : level === "low" ? "bg-warning/20 text-warning-foreground" : "bg-primary/10 text-primary")}>{getStockLabel(level)}</span>
                   </div>
@@ -153,7 +174,7 @@ export default function EstoquePage() {
                       <h3 className="text-sm font-semibold text-foreground truncate">{item.name}</h3>
                       <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", level === "empty" ? "bg-destructive/10 text-destructive" : level === "low" ? "bg-warning/20 text-warning-foreground" : "bg-primary/10 text-primary")}>{getStockLabel(level)}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{item.category} · {item.quantity} {item.unit}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{categoryLabel(item.category)} · {item.quantity} {item.unit}</p>
                   </div>
                   <button
                     type="button"

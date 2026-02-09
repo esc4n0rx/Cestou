@@ -1,15 +1,6 @@
-﻿export const categories = [
-  "Frutas",
-  "Verduras",
-  "Carnes",
-  "Laticinios",
-  "Bebidas",
-  "Limpeza",
-  "Higiene",
-  "Padaria",
-  "Graos",
-  "Outros",
-]
+﻿import { defaultCategoryNames } from "@/lib/market/categories"
+
+export const categories = defaultCategoryNames
 
 export type ListStatus = "draft" | "shopping" | "completed"
 

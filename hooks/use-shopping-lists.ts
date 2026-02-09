@@ -2,8 +2,9 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { getSupabaseBrowserClient } from "@/lib/clients/supabase-browser"
-import { categories, toNumber } from "@/lib/market/constants"
+import { toNumber } from "@/lib/market/constants"
 import type { ShoppingList, ShoppingListItem } from "@/lib/market/types"
+import { useCategories } from "@/hooks/use-categories"
 
 interface CreateItemInput {
   name: string
@@ -44,6 +45,8 @@ function mapList(row: any): ShoppingList {
 
 export function useShoppingLists() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), [])
+  const { categories, loading: categoriesLoading, error: categoriesError, loadCategories } =
+    useCategories()
   const [lists, setLists] = useState<ShoppingList[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -294,6 +297,9 @@ export function useShoppingLists() {
     loading,
     error,
     categories,
+    categoriesLoading,
+    categoriesError,
+    loadCategories,
     loadLists,
     createList,
     copyList,
