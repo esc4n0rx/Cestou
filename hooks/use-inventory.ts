@@ -2,8 +2,9 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { getSupabaseBrowserClient } from "@/lib/clients/supabase-browser"
-import { categories, toNumber } from "@/lib/market/constants"
+import { toNumber } from "@/lib/market/constants"
 import type { InventoryItem } from "@/lib/market/types"
+import { useCategories } from "@/hooks/use-categories"
 
 function mapInventoryItem(row: any): InventoryItem {
   return {
@@ -19,6 +20,8 @@ function mapInventoryItem(row: any): InventoryItem {
 
 export function useInventory() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), [])
+  const { categories, loading: categoriesLoading, error: categoriesError, loadCategories } =
+    useCategories()
   const [items, setItems] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -64,6 +67,9 @@ export function useInventory() {
     loading,
     error,
     categories,
+    categoriesLoading,
+    categoriesError,
+    loadCategories,
     loadInventory,
     decrementItem,
   }

@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowLeft,
   Check,
@@ -37,6 +37,12 @@ function listTotal(list: ShoppingList) {
     }
     return sum + item.unit_price * item.purchased_quantity
   }, 0)
+}
+
+function vibrateLight() {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    navigator.vibrate(15)
+  }
 }
 
 function PurchaseModal({
@@ -126,6 +132,8 @@ export default function ListaPage() {
     loading,
     error,
     categories,
+    categoriesLoading,
+    categoriesError,
     loadLists,
     createList,
     copyList,
@@ -153,6 +161,7 @@ export default function ListaPage() {
 
   const [newItemName, setNewItemName] = useState("")
   const [newItemQty, setNewItemQty] = useState("1")
+  const [newItemCategory, setNewItemCategory] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("Todos")
   const [showCategoryFilter, setShowCategoryFilter] = useState(false)
@@ -166,6 +175,22 @@ export default function ListaPage() {
   useEffect(() => {
     loadLists()
   }, [loadLists])
+
+  useEffect(() => {
+    if (!newItemCategory && categories.length > 0) {
+      setNewItemCategory(categories[0].name)
+    }
+  }, [categories, newItemCategory])
+
+  useEffect(() => {
+    if (
+      selectedCategory !== "Todos" &&
+      categories.length > 0 &&
+      !categories.some((category) => category.name === selectedCategory)
+    ) {
+      setSelectedCategory("Todos")
+    }
+  }, [categories, selectedCategory])
 
   const openList = (id: string) => {
     setActiveListId(id)
@@ -351,20 +376,58 @@ export default function ListaPage() {
     const byCat = selectedCategory === "Todos" || item.category === selectedCategory
     return byName && byCat
   })
-  const pending = filtered.filter((item) => !item.is_purchased)
-  const bought = filtered.filter((item) => item.is_purchased)
+  const categoryOrder = useMemo(
+    () =>
+      new Map(
+        categories.map((category, index) => [
+          category.name,
+          category.position ?? index,
+        ])
+      ),
+    [categories]
+  )
+  const categoryLabel = useCallback(
+    (name: string) => {
+      const match = categories.find((category) => category.name === name)
+      if (!match) return name
+      return `${match.emoji} ${match.name}`
+    },
+    [categories]
+  )
+  const sortByCategory = useCallback(
+    (items: ShoppingListItem[]) =>
+      [...items].sort((a, b) => {
+        const orderA = categoryOrder.get(a.category) ?? Number.MAX_SAFE_INTEGER
+        const orderB = categoryOrder.get(b.category) ?? Number.MAX_SAFE_INTEGER
+        if (orderA !== orderB) return orderA - orderB
+        return a.name.localeCompare(b.name)
+      }),
+    [categoryOrder]
+  )
+  const pending = isShopping
+    ? sortByCategory(filtered.filter((item) => !item.is_purchased))
+    : filtered.filter((item) => !item.is_purchased)
+  const bought = isShopping
+    ? sortByCategory(filtered.filter((item) => item.is_purchased))
+    : filtered.filter((item) => item.is_purchased)
   const boughtCount = activeList.shopping_list_items.filter((item) => item.is_purchased).length
+  const activeCategories = categories.filter((category) => category.is_active)
 
   const addItem = async () => {
     if (!newItemName.trim()) return
     const qty = Number.parseFloat(newItemQty.replace(",", "."))
     const planned = Number.isNaN(qty) || qty <= 0 ? 1 : qty
     setBusy(true)
-    const result = await addItemToList(activeList.id, { name: newItemName.trim(), plannedQuantity: planned })
+    const result = await addItemToList(activeList.id, {
+      name: newItemName.trim(),
+      plannedQuantity: planned,
+      category: newItemCategory || "Outros",
+    })
     setBusy(false)
     if (result.error) return setFeedback(result.error)
     setNewItemName("")
     setNewItemQty("1")
+    setNewItemCategory(activeCategories[0]?.name ?? "")
     inputRef.current?.focus()
   }
 
@@ -402,6 +465,9 @@ export default function ListaPage() {
         </div>
 
         {feedback && <p className="mb-3 text-sm text-destructive">{feedback}</p>}
+        {categoriesError && (
+          <p className="mb-3 text-sm text-destructive">{categoriesError}</p>
+        )}
 
         {!isCompleted && (
           <div className="mb-3 space-y-2">
@@ -414,7 +480,19 @@ export default function ListaPage() {
               placeholder="Adicionar item..."
               className="w-full rounded-xl border border-input bg-card py-3 px-4 text-sm"
             />
-            <div className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[120px_auto]">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_120px_auto]">
+              <select
+                value={newItemCategory}
+                onChange={(e) => setNewItemCategory(e.target.value)}
+                disabled={categoriesLoading}
+                className="min-w-0 rounded-xl border border-input bg-card py-3 px-3 text-sm"
+              >
+                {activeCategories.map((category) => (
+                  <option key={category.name} value={category.name}>
+                    {category.emoji} {category.name}
+                  </option>
+                ))}
+              </select>
               <input
                 type="text"
                 value={newItemQty}
@@ -443,7 +521,7 @@ export default function ListaPage() {
           </div>
           <div className="relative">
             <button type="button" onClick={() => setShowCategoryFilter(!showCategoryFilter)} className="flex h-full items-center gap-1.5 rounded-xl border border-input bg-card px-3 text-sm">
-              <span className="hidden sm:inline">{selectedCategory}</span>
+              <span className="hidden sm:inline">{selectedCategory === "Todos" ? "Todos" : categoryLabel(selectedCategory)}</span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </button>
             {showCategoryFilter && (
@@ -452,11 +530,11 @@ export default function ListaPage() {
                   setSelectedCategory("Todos")
                   setShowCategoryFilter(false)
                 }} className={cn("w-full rounded-lg px-3 py-2 text-left text-sm", selectedCategory === "Todos" ? "bg-primary/10 text-primary" : "hover:bg-muted")}>Todos</button>
-                {categories.map((category) => (
-                  <button key={category} type="button" onClick={() => {
-                    setSelectedCategory(category)
+                {activeCategories.map((category) => (
+                  <button key={category.name} type="button" onClick={() => {
+                    setSelectedCategory(category.name)
                     setShowCategoryFilter(false)
-                  }} className={cn("w-full rounded-lg px-3 py-2 text-left text-sm", selectedCategory === category ? "bg-primary/10 text-primary" : "hover:bg-muted")}>{category}</button>
+                  }} className={cn("w-full rounded-lg px-3 py-2 text-left text-sm", selectedCategory === category.name ? "bg-primary/10 text-primary" : "hover:bg-muted")}>{category.emoji} {category.name}</button>
                 ))}
               </div>
             )}
@@ -472,7 +550,7 @@ export default function ListaPage() {
               }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-primary/5"><Check className="h-3 w-3 text-transparent" /></button>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2"><span className="text-sm font-medium text-foreground truncate">{item.name}</span>{item.is_urgent && <span className="rounded-full bg-warning/20 px-2 py-0.5 text-[10px]">Urgente</span>}</div>
-                <p className="text-xs text-muted-foreground">{item.planned_quantity} {item.unit} · {item.category}</p>
+                <p className="text-xs text-muted-foreground">{item.planned_quantity} {item.unit} · {categoryLabel(item.category)}</p>
               </div>
               {!isCompleted && (
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
@@ -521,6 +599,7 @@ export default function ListaPage() {
                 setFeedback(result.error)
                 return
               }
+              vibrateLight()
               setPurchaseItem(null)
             }}
           />
