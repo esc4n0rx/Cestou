@@ -192,6 +192,35 @@ export default function ListaPage() {
     }
   }, [categories, selectedCategory])
 
+  const categoryOrder = useMemo(
+    () =>
+      new Map(
+        categories.map((category, index) => [
+          category.name,
+          category.position ?? index,
+        ])
+      ),
+    [categories]
+  )
+  const categoryLabel = useCallback(
+    (name: string) => {
+      const match = categories.find((category) => category.name === name)
+      if (!match) return name
+      return `${match.emoji} ${match.name}`
+    },
+    [categories]
+  )
+  const sortByCategory = useCallback(
+    (items: ShoppingListItem[]) =>
+      [...items].sort((a, b) => {
+        const orderA = categoryOrder.get(a.category) ?? Number.MAX_SAFE_INTEGER
+        const orderB = categoryOrder.get(b.category) ?? Number.MAX_SAFE_INTEGER
+        if (orderA !== orderB) return orderA - orderB
+        return a.name.localeCompare(b.name)
+      }),
+    [categoryOrder]
+  )
+
   const openList = (id: string) => {
     setActiveListId(id)
     setView("detail")
@@ -376,34 +405,6 @@ export default function ListaPage() {
     const byCat = selectedCategory === "Todos" || item.category === selectedCategory
     return byName && byCat
   })
-  const categoryOrder = useMemo(
-    () =>
-      new Map(
-        categories.map((category, index) => [
-          category.name,
-          category.position ?? index,
-        ])
-      ),
-    [categories]
-  )
-  const categoryLabel = useCallback(
-    (name: string) => {
-      const match = categories.find((category) => category.name === name)
-      if (!match) return name
-      return `${match.emoji} ${match.name}`
-    },
-    [categories]
-  )
-  const sortByCategory = useCallback(
-    (items: ShoppingListItem[]) =>
-      [...items].sort((a, b) => {
-        const orderA = categoryOrder.get(a.category) ?? Number.MAX_SAFE_INTEGER
-        const orderB = categoryOrder.get(b.category) ?? Number.MAX_SAFE_INTEGER
-        if (orderA !== orderB) return orderA - orderB
-        return a.name.localeCompare(b.name)
-      }),
-    [categoryOrder]
-  )
   const pending = isShopping
     ? sortByCategory(filtered.filter((item) => !item.is_purchased))
     : filtered.filter((item) => !item.is_purchased)

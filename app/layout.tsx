@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/contexts/auth-context"
-import { AuthGuard } from "@/components/auth-guard"
+//import { AuthGuard } from "@/components/auth-guard"
 import { PwaManager } from "@/components/pwa-manager"
 import "./globals.css"
 
@@ -51,7 +51,7 @@ export default function RootLayout({
           disableTransitionOnChange={false}
         >
           <AuthProvider>
-            <AuthGuard>{children}</AuthGuard>
+            {children}
             <PwaManager />
           </AuthProvider>
         </ThemeProvider>
