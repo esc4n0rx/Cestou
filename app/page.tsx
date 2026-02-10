@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/use-auth"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signInWithEmail, signInWithGoogle, signUpWithEmail } = useAuth()
+  const { user, loading: authLoading, signInWithEmail, signInWithGoogle, signUpWithEmail } = useAuth()
 
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
@@ -18,6 +18,13 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+
+  React.useEffect(() => {
+    if (authLoading) return
+    if (user) {
+      router.replace("/inicio")
+    }
+  }, [authLoading, router, user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,11 +42,18 @@ export default function LoginPage() {
 
     setLoading(true)
 
-    const result = isLogin
-      ? await signInWithEmail(email, password)
-      : await signUpWithEmail(name, email, password)
+    let result
 
-    setLoading(false)
+    try {
+      result = isLogin
+        ? await signInWithEmail(email, password)
+        : await signUpWithEmail(name, email, password)
+    } catch {
+      setError("Nao foi possivel autenticar. Tente novamente.")
+      return
+    } finally {
+      setLoading(false)
+    }
 
     if (result.error) {
       setError(result.error)
@@ -53,10 +67,16 @@ export default function LoginPage() {
     setError("")
     setGoogleLoading(true)
 
-    const result = await signInWithGoogle()
+    try {
+      const result = await signInWithGoogle()
 
-    if (result.error) {
-      setError(result.error)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+    } catch {
+      setError("Nao foi possivel conectar com Google. Tente novamente.")
+    } finally {
       setGoogleLoading(false)
     }
   }
