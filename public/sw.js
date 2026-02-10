@@ -1,4 +1,4 @@
-const SW_VERSION = "v1.0.1"
+const SW_VERSION = "v1.0.2"
 const STATIC_CACHE = `market-static-${SW_VERSION}`
 const RUNTIME_CACHE = `market-runtime-${SW_VERSION}`
 
@@ -42,6 +42,22 @@ self.addEventListener("fetch", (event) => {
   if (!isSameOrigin) return
 
   const isNavigation = event.request.mode === "navigate"
+
+  const isAuthRoute =
+    requestUrl.pathname === "/" ||
+    requestUrl.pathname.startsWith("/auth")
+
+  if (isAuthRoute) {
+    event.respondWith(fetch(event.request))
+    return
+  }
+
+  const isNextDataOrChunks = requestUrl.pathname.startsWith("/_next/")
+  if (isNextDataOrChunks) {
+    event.respondWith(fetch(event.request))
+    return
+  }
+
   if (isNavigation) {
     event.respondWith(
       fetch(event.request)
